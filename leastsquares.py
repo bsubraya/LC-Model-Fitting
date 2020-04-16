@@ -7,16 +7,13 @@ import os
 import pandas as pd
 import scipy.interpolate as sp
 from scipy import interpolate
-test = pd.read_csv('/Users/bhagyasubrayan/Desktop/Plastic/plasticc_test_lightcurves_01.csv')
+test = pd.read_csv('/Users/bhagyasubrayan/Desktop/Explosion Parameters/Plasticc/plasticc_test_lightcurves_01.csv')
 f_0 = 27.5
 dmod = 40.977
 true_peak = 60499.461
 #Working with Takashi's models
-list = os.listdir("/Users/bhagyasubrayan/Desktop/Plastic/public_data/")
-lines = open('/Users/bhagyasubrayan/Desktop/Plastic/public_data/'+ list[0]).readlines()
-a = open('modelnames.txt', 'w').writelines(lines[2:])
-with open('modelnames.txt', 'r') as in_file:
-    stripped = (line.strip() for line in in_file)
+with open('/Users/bhagyasubrayan/Desktop/Explosion Parameters/modelnames.txt') as f:
+    stripped = (line.strip() for line in f)
     lines = (line.split() for line in stripped if line)
     with open('model.csv', 'w') as out_file:
         writer = csv.writer(out_file)
@@ -57,18 +54,19 @@ for i in range(len(splitcontent)):
     model_arr['Mass Loss'] = mass_loss
     model_arr['CSM edge'] = csm_edge
     model_arr['Beta'] = beta
-#print(model_arr)
+print(model_arr)
 group = model_arr.groupby(['Explosion Energy','Mass Loss','CSM edge','Beta']).get_group(('1e51','1e-2','1e15','5'))
 chi_m_arr = pd.DataFrame()
 chi_m_arr['Model name'] = group['Model Name']
 chi_m_arr['P Mass'] = group['Progenitor mass']
 chi_m_arr = chi_m_arr.reset_index(drop=True)
-print(len(group))
+print(chi_m_arr)
 sl_list = []
+path = "/Users/bhagyasubrayan/Desktop/Explosion Parameters/Takashi's models/multicolorlightcurves/"
 #Collecting magnitudes from these models in group
 for k in range(0,len(group)):
     chib_list_k = []
-    mod = pd.read_table('mod'+'_'+ group.iloc[k,0]+'.sdss2.txt', names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
+    mod = pd.read_table(path + group.iloc[k,0]+'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
     #print(mod)
 #Filtering and making sense of the observed data
     for i in range(0,6):
@@ -83,7 +81,7 @@ for k in range(0,len(group)):
         for j in range(len(new_i)):
             if (new_i.iloc[j]['flux'] < 0 ):
                 new_i.iloc[j]['flux'] = 0.01
-            a1 = -2.5*m.log(new_i.iloc[j]['flux']/ f_0)
+            a1 = -2.5*np.log10(new_i.iloc[j]['flux']/ f_0)
             #print(type(m.log(new_i.iloc[j]['flux']/f_0)))
             abs = a1 - dmod
             am_m_i.append(abs)
@@ -93,22 +91,25 @@ for k in range(0,len(group)):
         tag = new_i.loc[new_i['Abs_mag'].idxmin()]
         #print(tag[0])
         for k in range(0,len(new_i)):
-            d = new_i.iloc[k]['mjd'] - tag[0]
+            d = new_i.iloc[k]['mjd'] - true_peak
             #print(d)
             ndays_i.append(d)
         #print(len(ndays))
         new_i['t_max_afterdays'] = ndays_i
-        print(new_i)
+        #print(new_i)
         x_i = new_i['t_max_afterdays'].values
         y_obs_chi_i = new_i['Abs_mag'].values
         stdev_i = y_obs_chi_i.std()
-        print(stdev_i)
+        #print(stdev_i)
+        #plt.errorbar(x_i,y_obs_chi_i, yerr = new_i['flux_err'],fmt= 'o')
+        #plt.gca().invert_yaxis()
+        #plt.show()
         err = new_i['flux_err']
-        plt.errorbar(x_i,y_obs_chi_i,yerr = err, fmt = 'o')
-        plt.title('PlasTicc Light curves for a IIP in different bands')
-        plt.xlabel('days after explosion')
-        plt.ylabel('Absolute Magnitude ')
-        plt.gca().legend(('u','g','r','i','z','y'))
+        plt.errorbar(x_i,y_obs_chi_i,yerr = err, fmt = 'ro')
+        #plt.title('PlasTicc Light curves for a IIP in bands'+str(i))
+        #plt.xlabel('days after explosion')
+        #plt.ylabel('Absolute Magnitude ')
+        #plt.gca().legend(('u','g','r','i','z','y'))
         pdays_i=[]
         b_arr = mod.iloc[:,[0,i+1]].drop_duplicates()
         g = b_arr.groupby('epoch').mean()
@@ -117,32 +118,38 @@ for k in range(0,len(group)):
         arr = pd.DataFrame()
         arr['Epoch'] = epo
         arr['Magnitude'] = mag
-        fil_max= arr.loc[arr['Magnitude'].idxmin()]
-        for k in range(0,len(arr)):
-           d1 = arr.iloc[k]['Epoch'] - fil_max[0]
+        #print(arr)
+        #fil_max= arr.loc[arr['Magnitude'].idxmin()]
+        #print(fil_max)
+        #for k in range(0,len(arr)):
+           #d1 = arr.iloc[k]['Epoch'] - fil_max[0]
            #print(d)
-           pdays_i.append(d1)
-        xnew = np.linspace(pdays_i[0],pdays_i[-1],500)
+           #pdays_i.append(d1)
+        #xnew = np.linspace(pdays_i[0],pdays_i[-1],500)
         #print(len(pdays_j))
         #print(len(mag))
-        f1 = interpolate.interp1d(pdays_i, mag, kind='cubic')
+        f1 = interpolate.interp1d(epo, mag, kind='cubic')
         y_pred_i = f1(x_i)
+        new_i['pred_mag'] = y_pred_i
+        #print(new_i)
         #plt.plot(x_i,f1(x_i),'*')
         #plt.gca().legend(('u','g','r','i','y','kepler'))
         #print((y_obs_chi))
         #print((y_pred_j))
         chi_i=[]
+        c = 0
         for q in range(0,len(y_obs_chi_i)):
-           c = ((y_obs_chi_i[q] - y_pred_i[q]) / stdev_i)**2
-           chi_i.append(c)
-        ch_i = sum(chi_i)
-        print(ch_i)
-        chib_list_k.append(ch_i)
-        print(chib_list_k)
+           c += ((y_obs_chi_i[q] - y_pred_i[q]) / stdev_i)**2
+        chib_list_k.append(c)
+        #print(chib_list_k)
+        plt.scatter(x_i,y_pred_i,color = 'g')
+        plt.legend(['Predicted','Observed'])
+        plt.title('Comparison in band'+ str(i))
+        plt.gca().invert_yaxis()
+        plt.ylim(-10,-50)
+        plt.show()
     sl_list.append(chib_list_k)
-    plt.gca().invert_yaxis()
-    plt.show()
-print(len(sl_list))
+print(len(sl_list[0]))
 sl_array = pd.DataFrame(sl_list,columns = ('u','g','r','i','y','kepler'))
 print(sl_array)
 result = pd.concat([chi_m_arr,sl_array],axis=1)

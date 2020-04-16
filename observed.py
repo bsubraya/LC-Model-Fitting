@@ -8,7 +8,7 @@ import pandas as pd
 import scipy.interpolate as sp
 from scipy import interpolate
 from scipy.stats import chisquare
-test = pd.read_csv('/Users/bhagyasubrayan/Desktop/Plastic/plasticc_test_lightcurves_01.csv')
+test = pd.read_csv('/Users/bhagyasubrayan/Desktop/Explosion Parameters/Plasticc/plasticc_test_lightcurves_01.csv')
 f_0 = 27.5
 dmod = 40.977
 true_peak = 60499.461
@@ -18,14 +18,18 @@ true_peak = 60499.461
 chi_metric = []
 p_metric= []
 for i in range(0,1):
-    t_g = test.groupby(['object_id', 'passband']).get_group((13,2))
+    t_g = test.groupby(['object_id', 'passband']).get_group((13,i))
+    #print(t_g)
+    am_m_i =[]
+    ndays_i = []
+    new_i = t_g.filter(['mjd','flux','flux_err'])
+    new_i = new_i.reset_index(drop=True)
+    new_i = new_i.drop(new_i[new_i.mjd < (true_peak - 150) ].index)
+    plt.errorbar(new_i['mjd'],new_i['flux'],yerr=new_i['flux_err'],fmt='o')
+    plt.show()
     #print(t_g)
     am_m_i =[]
     ndays = []
-    #print(t_g)
-    new_i = t_g.filter(['mjd','flux','flux_err'])
-    new_i = new_i.reset_index(drop=True)
-    new_i = new_i.drop(new_i[new_i.mjd < (true_peak - 200) ].index)
     #print(new_i)
     for j in range(len(new_i)):
         if (new_i.iloc[j]['flux'] < 0 ):
