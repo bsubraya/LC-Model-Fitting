@@ -77,20 +77,25 @@ for k in range(0,len(group)):
         t_g = test.groupby(['object_id', 'passband']).get_group((13,i))
         #print(t_g)
         am_m_i =[]
+        mag_err_i = []
         ndays_i = []
         new_i = t_g.filter(['mjd','flux','flux_err'])
-        new_i = new_i.reset_index(drop=True)
         new_i = new_i.drop(new_i[new_i.mjd < (true_peak - 150) ].index)
-        print(new_i)
+        #print(new_i)
+        new_i = new_i.drop(new_i[new_i.flux < 0].index)
+        new_i = new_i.reset_index(drop=True)
+        #print(new_i)
         for j in range(len(new_i)):
-            if (new_i.iloc[j]['flux'] < 0 ):
-                new_i.iloc[j]['flux'] = 0.01
-            a1 = -2.5*np.log10(new_i.iloc[j]['flux'])
-            #print(type(m.log(new_i.iloc[j]['flux']/f_0)))
+            a1 = -2.5*np.log10(new_i.iloc[j]['flux'])+f_0
             abs = a1 - dmod
-            am_m_i.append(a1)
+            mag_err = np.abs(2.5*(new_i.iloc[j]['flux_err']/new_i.iloc[j]['flux'])*np.log(10))
+            am_m_i.append(abs)
+            mag_err_i.append(mag_err)
         new_i['Abs_mag'] = am_m_i
-        new_i.reset_index(drop= True)
+        new_i['Mag_error'] = mag_err_i
+        print(new_i)
+        new_i = new_i.drop(new_i[new_i.Mag_error > 10].index)
+        new_i = new_i.reset_index(drop= True)
         print((new_i))
         tag = new_i.loc[new_i['Abs_mag'].idxmin()]
         #print(tag[0])
@@ -100,7 +105,7 @@ for k in range(0,len(group)):
             ndays_i.append(d)
         #print(len(ndays))
         new_i['t_max_afterdays'] = ndays_i
-        #print(new_i)
+        print(new_i)
         x_i = new_i['t_max_afterdays'].values
         y_obs_chi_i = new_i['Abs_mag'].values
         stdev_i = y_obs_chi_i.std()
@@ -108,7 +113,7 @@ for k in range(0,len(group)):
         #plt.errorbar(x_i,y_obs_chi_i, yerr = new_i['flux_err'],fmt= 'o')
         #plt.gca().invert_yaxis()
         #plt.show()
-        err = new_i['flux_err']
+        err = new_i['Mag_error']
         plt.errorbar(x_i,y_obs_chi_i,yerr = err, fmt = 'ro')
         #plt.title('PlasTicc Light curves for a IIP in bands'+str(i))
         #plt.xlabel('days after explosion')
@@ -148,9 +153,9 @@ for k in range(0,len(group)):
         #print(chib_list_k)
         plt.scatter(x_i,y_pred_i,color = 'g')
         plt.legend(['Predicted','Observed'])
-        plt.title('Comparison in band'+ str(i)+ m_k)
+        plt.title('Comparison in band'+ str(i)+m_k)
         plt.gca().invert_yaxis()
-        plt.ylim(-5,-50)
+        #plt.ylim(-10,-50)
         plt.show()
     sl_list.append(chib_list_k)
 print(len(sl_list))
@@ -158,8 +163,8 @@ sl_array = pd.DataFrame(sl_list,columns = ('u','g','r','i','y','kepler'))
 print(sl_array)
 result = pd.concat([chi_m_arr,sl_array],axis=1)
 print(result)
-plt.gca().invert_yaxis()
-for i in range(0,1):
+#plt.gca().invert_yaxis()
+for i in range(0,6):
     plt.plot(result['Explosion Energy'],result.iloc[:,i+2],'o')
     plt.xlabel('Explosion Energy')
     plt.ylabel(u'$\u03C7^2$')
