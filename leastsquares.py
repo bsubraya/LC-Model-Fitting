@@ -54,24 +54,29 @@ for i in range(len(splitcontent)):
     model_arr['Mass Loss'] = mass_loss
     model_arr['CSM edge'] = csm_edge
     model_arr['Beta'] = beta
-print(model_arr)
-group = model_arr.groupby(['Explosion Energy','Mass Loss','CSM edge','Beta']).get_group(('1e51','1e-2','1e15','5'))
+print(len(model_arr))
+#group = model_arr.groupby(['Explosion Energy','Mass Loss','CSM edge','Beta']).get_group(('1e51','1e-2','1e15','5'))
+all_group = list(model_arr['Model Name'])
+#len(all_group)
 chi_m_arr = pd.DataFrame()
-chi_m_arr['Model name'] = group['Model Name']
-chi_m_arr['P Mass'] = group['Progenitor mass']
+chi_m_arr['Model name'] = all_group
+#chi_m_arr['P Mass'] = group['Progenitor mass']
 chi_m_arr = chi_m_arr.reset_index(drop=True)
-#print(chi_m_arr)
+print(chi_m_arr)
 sl_list = []
 path = "/Users/bhagyasubrayan/Desktop/Explosion Parameters/Takashi's models/multicolorlightcurves/"
 #Collecting magnitudes from these models in group
-for k in range(0,len(group)):
+for k in range(0,3):
     chib_list_k = []
-    m_n =  group.iloc[k,0]
-    mod = pd.read_table(path + group.iloc[k,0]+'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
+    #m_n =  group.iloc[k,0]
+    m_n =all_group[k]
+    mod = pd.read_table(path + all_group[k] +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
     #print(mod)
+    #mod.iloc[:,[0,6]]
 #Filtering and making sense of the observed data
-    for i in range(0,6):
-        t_g = test.groupby(['object_id', 'passband']).get_group((13,i))
+    for i in range(0,1):
+        #t_g = test.groupby(['object_id', 'passband']).get_group((13,i))#for any band
+        t_g = test.groupby(['object_id', 'passband']).get_group((13,2))
         #print(t_g)
         am_m_i =[]
         mag_err_i = []
@@ -106,10 +111,6 @@ for k in range(0,len(group)):
         x_i = new_i['t_max_afterdays'].values
         y_obs_chi_i = new_i['Abs_mag'].values
         stdev_i = y_obs_chi_i.std()
-        #print(stdev_i)
-        #plt.errorbar(x_i,y_obs_chi_i, yerr = new_i['flux_err'],fmt= 'o')
-        #plt.gca().invert_yaxis()
-        #plt.show()
         err = new_i['Mag_error']
         plt.errorbar(x_i,y_obs_chi_i,yerr = err, fmt = 'ro')
         #plt.title('PlasTicc Light curves for a IIP in bands'+str(i))
@@ -117,44 +118,65 @@ for k in range(0,len(group)):
         #plt.ylabel('Absolute Magnitude ')
         #plt.gca().legend(('u','g','r','i','z','y'))
         pdays_i=[]
-        b_arr = mod.iloc[:,[0,i+1]].drop_duplicates()
+        #b_arr = mod.iloc[:,[0,i+1]].drop_duplicates()
+        b_arr = mod.iloc[:,[0,3]].drop_duplicates()
         g = b_arr.groupby('epoch').mean()
         epo = b_arr['epoch'].drop_duplicates()
         mag = g.values.squeeze()
         arr = pd.DataFrame()
         arr['Epoch'] = epo
         arr['Magnitude'] = mag
-        #print(arr)
-        #fil_max= arr.loc[arr['Magnitude'].idxmin()]
-        #print(fil_max)
-        #for k in range(0,len(arr)):
-           #d1 = arr.iloc[k]['Epoch'] - fil_max[0]
-           #print(d)
-           #pdays_i.append(d1)
-        #xnew = np.linspace(pdays_i[0],pdays_i[-1],500)
-        #print(len(pdays_j))
-        #print(len(mag))
         f1 = interpolate.interp1d(epo, mag, kind='cubic')
         y_pred_i = f1(x_i)
         new_i['pred_mag'] = y_pred_i
-        #print(new_i)
-        #plt.plot(x_i,f1(x_i),'*')
-        #plt.gca().legend(('u','g','r','i','y','kepler'))
-        #print((y_obs_chi))
-        #print((y_pred_j))
         chi_i=[]
         c = 0
         for q in range(0,len(y_obs_chi_i)):
            c += ((y_obs_chi_i[q] - y_pred_i[q]) / stdev_i)**2
         chib_list_k.append(c)
         #print(chib_list_k)
-        plt.scatter(x_i,y_pred_i,color = 'g')
+        plt.plot(epo,mag,color = 'g')
         plt.legend(['Predicted','Observed'])
-        plt.title('Comparison in band'+ str(i)+m_n)
+        plt.title('Comparison in band_'+ 'r___'+ m_n)
         plt.gca().invert_yaxis()
-        #plt.ylim(-10,-50)
+        plt.ylim(-12,-20)
+        plt.xlim(0,200)
         plt.show()
     sl_list.append(chib_list_k)
+len(sl_list)
+chi_m_arr['chi_square_r'] = [sl_list[i][0] for i in range(0,len(sl_list))]
+chi_m_arr
+#Finding Reduced chi-squared
+# nu = number of observation - number of Parameters(5)
+m = 5
+n = len(new_i)
+nu = n - m
+red_chi_square = chi_m_arr['chi_square_r']/nu
+chi_m_arr['Reduced_Chi'] = red_chi_square
+chi_m_arr
+best_model = chi_m_arr.loc[chi_m_arr['Reduced_Chi'].idxmin()]
+best_model
+best = model_arr.groupby(['Model Name']).get_group(best_model[0])
+best
+plt.errorbar(x_i,y_obs_chi_i,yerr = err, fmt = 'ro')
+best_mod = pd.read_table(path + best_model[0] +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
+best_arr = best_mod.iloc[:,[0,3]].drop_duplicates()
+g = best_arr.groupby('epoch').mean()
+epo = best_arr['epoch'].drop_duplicates()
+mag = g.values.squeeze()
+arr = pd.DataFrame()
+arr['Epoch'] = epo
+arr['Magnitude'] = mag
+plt.errorbar(x_i,y_obs_chi_i,yerr = err, fmt = 'ro')
+plt.plot(arr['Epoch'], arr['Magnitude'])
+plt.xlim(0,200)
+plt.ylim(-18,-12)
+plt.gca().invert_yaxis()
+plt.show()
+
+
+
+
 #print(len(sl_list[0]))
 sl_array = pd.DataFrame(sl_list,columns = ('u','g','r','i','y','kepler'))
 #print(sl_array)
