@@ -13,6 +13,10 @@ from astropy.cosmology import FlatLambdaCDM
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 import sfdmap
+path1 ='/Users/bhagyasubrayan/Desktop/Explosion Parameters/Takashi\'s models/new_models_SDSS/'
+model_names = os.listdir(path1)
+model_names.remove('.DS_Store')
+model_names = np.sort(model_names)
 pd.options.mode.chained_assignment = 'raise'
 with open('/Users/bhagyasubrayan/Desktop/Explosion Parameters/modelnames.txt') as f:
     stripped = (line.strip() for line in f)
@@ -58,7 +62,7 @@ for i in range(len(splitcontent)):
     model_arr['Beta'] = beta
 #print((model_arr))
 #Defining path for multicolor wavelength data from Takashi's Models
-path = "/Users/bhagyasubrayan/Desktop/Explosion Parameters/Takashi's models/multicolorlightcurves/"
+#path = "/Users/bhagyasubrayan/Desktop/Explosion Parameters/Takashi's models/multicolorlightcurves/"
 def process(df,band,source):
     if source == '0':
         #print(True)
@@ -101,7 +105,7 @@ def model_param(model_name):
     best = model_arr.groupby(['Model Name']).get_group(model_name)
     return best
 def random_model(name,band,color):
-    mod = pd.read_table(path + name +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
+    mod = pd.read_table(path1 + name , skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
     df_pred = mod[['epoch',band]]
     plt.plot(df_pred['epoch'],df_pred[band],color+'--',label = 'Best_fit : '+name)
     #plt.plot(upper['epoch'],upper['Ab_obs_mag'],band+'*',label = 'Upper Limits')
@@ -110,7 +114,7 @@ def random_model(name,band,color):
     plt.ylim(-20, -10)
 def plot_model(df,name,band,t,color):#Add upper df if upper limits
     plt.errorbar(df['epoch'],df['Ab_obs_mag'],yerr = df['mag_error'],fmt = color+'o',label = 'Observed '+band+' with delay time : '+ str(t))
-    mod = pd.read_table(path + name +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
+    mod = pd.read_table(path1 + name , skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
     df_pred = mod[['epoch',band]]
     plt.plot(df_pred['epoch'],df_pred[band],color+'--',label = 'Best_fit : '+name)
     #plt.plot(upper['epoch'],upper['Ab_obs_mag'],band+'*',label = 'Upper Limits')
@@ -151,16 +155,16 @@ def metadata(eventname):
     return z, ra, dec, Ag,Ar,Ai, Az,ebv,s,dmod
 def fit_all_models(df,band):
     chi = []
-    for k in range(0,len(all_group)):
-        m_n = all_group[k]
+    for k in range(0,len(model_names)):
+        m_n = model_names[k]
         #print(m_n)
-        mod = pd.read_table(path + all_group[k] +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
+        mod = pd.read_table(path1 + model_names[k] , skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
         #print(mod)
         df_pred = mod[['epoch',band]]
         #To fix the problem of interpolation remove elements greater than the interpolation
         #range and modifying the corresponding ztf_obs_dataframe
         df_final = predicted_mag_at_observed_epochs(df_pred,list(df.epoch),df)
-        chi2 = np.sum((((df_final.Ab_obs_mag - df_final.Pred_mag)/df_final.mag_error)**2))/(len(df_final)-5)
+        chi2 = np.sum((((df_final.Ab_obs_mag - df_final.Pred_mag)/df_final.mag_error)**2))/(len(df_final)-7)
         #chi2_r = np.sum((((df_r_ztf.Ab_obs_mag - df_r_ztf.Pred_mag)/df_r_ztf.sigmapsf)**2))/(len(df_r_ztf)-5)
         #chi_g.append(chi2_g)
         #chi_r.append(chi2_r)
@@ -178,7 +182,7 @@ def best_texp(eventname,df,band,min,max):
     for k in np.arange(min,max,0.25):
         print('Factor of texplosion:',k)
         chi_m_arr = pd.DataFrame()
-        chi_m_arr['Model name'] = all_group
+        chi_m_arr['Model name'] = model_names
         chi_m_arr = chi_m_arr.reset_index(drop=True)
         texp.append(k)
         texp_date = df['MJD'][0] - (k)
@@ -202,7 +206,7 @@ def best_texp(eventname,df,band,min,max):
     fit_time['Reduced_chi'] = fit_best_chi
     fit_time['Difference'] = list(abs(fit_time.Reduced_chi - 1))
     #if method == 'difference':
-    print(fit_time)
+    #print(fit_time)
     best_fit = fit_time.loc[fit_time['Difference'].idxmin()]
     #else:
         #best_fit = fit_time.loc[fit_time['Reduced_chi'].idxmin()]
@@ -215,8 +219,8 @@ def analysis(eventname,df,band,color,min,max):#Add upper if upper limits
     #mod_upper = final_obs_df(upper,original_obs.MJD[0]-texplosion)
     #print(mod_df)
     plot_model(mod_df, name = fit_model,band = band, t = texplosion,color=color)
-    best_fit_param = model_param(fit_model)
-    print(best_fit_param)
+    #best_fit_param = model_param(fit_model)
+    #print(best_fit_param)
     print('Reduced_chi_value for '+ band+ ':', fit_value )
     return texplosion, fit_model
 def extinction(ra,dec):
