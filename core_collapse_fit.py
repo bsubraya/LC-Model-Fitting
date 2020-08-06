@@ -73,7 +73,7 @@ event_data('./ztf-v2/2020_sne_table.json')
 #Trying to give weights to bands, and fitting the other band based on this band
 #First trying for g_events
 
-event_g = ['ZTF19abqyouo','ZTF19abqyoxj','ZTF19aceckht','ZTF19acxowrr','ZTF18acyybvg','ZTF19abcneik','ZTF19aavkptg','ZTF20aanadof']
+event_g = ['ZTF19aavkptg','ZTF19abcneik','ZTF19abqyouo','ZTF19abqyoxj','ZTF19aceckht','ZTF19acxowrr','ZTF18acyybvg','ZTF19abcneik','ZTF20aanadof']
 def process(filename):
     file = pd.read_csv(filename)
     df_g = file.groupby(['band']).get_group('g')
@@ -127,12 +127,12 @@ def model_param(model_name):
     best = model_arr.groupby(['Model Name']).get_group(model_name)
     return best
 def plot_model(df,name,band,t):#Add upper df if upper limits
-    plt.errorbar(df['epoch'],df['Ab_obs_mag'],yerr = df['mag_error'],fmt = band+'o',label = 'Observed '+band+' with texp : '+ str(t))
+    plt.errorbar(df['epoch'],df['Ab_obs_mag'],yerr = df['mag_error'],fmt = band+'o',label = 'Observed '+band+' with delay time : '+ str(t))
     mod = pd.read_table(path + name +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
     df_pred = mod[['epoch',band]]
     plt.plot(df_pred['epoch'],df_pred[band],band+'--',label = 'Best_fit : '+name)
     #plt.plot(upper['epoch'],upper['Ab_obs_mag'],band+'*',label = 'Upper Limits')
-    plt.legend()
+    plt.legend(prop={"size":10})
     plt.xlim(-40,200)
     plt.ylim(-20, -10)
 
@@ -203,7 +203,7 @@ def best_texp(df,band,min,max):
     best_fit = fit_time.loc[fit_time['Difference'].idxmin()]
     #else:
         #best_fit = fit_time.loc[fit_time['Reduced_chi'].idxmin()]
-    #print(best_fit)
+    print(fit_time)
     return fit_time, best_fit[0] , best_fit[1],best_fit[2]
 
 def analysis(df,band,min,max):#Add upper if upper limits
@@ -219,7 +219,7 @@ def analysis(df,band,min,max):#Add upper if upper limits
     return texplosion, fit_model
 #With weight for g_band_only
 #method = input('Choose the method (difference/minimum):')
-for i in range(0,len(event_g)):
+for i in range(0,2):
     print(event_g[i])
     z,ra,dec = metadata(event_g[i])
     print('Redshift : ',z)
@@ -241,10 +241,12 @@ for i in range(0,len(event_g)):
     print('dmod uncertainity:',s)
     #g_upper, r_upper = process(event_g[i]+'_upper.csv')
     plt.figure(figsize=(10,8))
-    texplo_g, model_g = analysis(df_g_ztf,band = 'g',min= 1,max = 15)#upper = g_upper
+    texplo_g, model_g = analysis(df_g_ztf,band = 'g',min= 1,max = 8)#upper = g_upper
     texplo_r,model_r = analysis(df_r_ztf,band = 'r', min = texplo_g - 3 ,max = texplo_g + 5)#upper = r_upper,
-    plt.title(event_g[i]+ ' ')
-    plt.ylabel('Absolute Magnitude')
-    plt.xlabel('Days from texplosion')
+    plt.title(event_g[i]+ ' ',fontsize = '15')
+    plt.ylabel('Absolute Magnitude',fontsize = '15')
+    plt.xlabel('Days from texplosion',fontsize = '15')
+    plt.rc('xtick', labelsize= 15)
+    plt.rc('ytick', labelsize= 15)
     plt.gca().invert_yaxis()
     plt.show()

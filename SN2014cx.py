@@ -100,14 +100,22 @@ all_group = list(model_arr['Model Name'])
 def model_param(model_name):
     best = model_arr.groupby(['Model Name']).get_group(model_name)
     return best
-def plot_model(df,name,band,t,color):#Add upper df if upper limits
-    plt.errorbar(df['epoch'],df['Ab_obs_mag'],yerr = df['mag_error'],fmt = color+'o',label = 'Observed '+band+' with texp : '+ str(t))
+def random_model(name,band,color):
     mod = pd.read_table(path + name +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
     df_pred = mod[['epoch',band]]
     plt.plot(df_pred['epoch'],df_pred[band],color+'--',label = 'Best_fit : '+name)
     #plt.plot(upper['epoch'],upper['Ab_obs_mag'],band+'*',label = 'Upper Limits')
     plt.legend()
-    plt.xlim(-40,200)
+    plt.xlim(-40,250)
+    plt.ylim(-20, -10)
+def plot_model(df,name,band,t,color):#Add upper df if upper limits
+    plt.errorbar(df['epoch'],df['Ab_obs_mag'],yerr = df['mag_error'],fmt = color+'o',label = 'Observed '+band+' with delay time : '+ str(t))
+    mod = pd.read_table(path + name +'.sdss2', skiprows = 2,names = ['epoch','u','g','r','i','z','kepler'], sep='\s+')
+    df_pred = mod[['epoch',band]]
+    plt.plot(df_pred['epoch'],df_pred[band],color+'--',label = 'Best_fit : '+name)
+    #plt.plot(upper['epoch'],upper['Ab_obs_mag'],band+'*',label = 'Upper Limits')
+    plt.legend()
+    plt.xlim(-40,250)
     plt.ylim(-20, -10)
 def final_obs_df(eventname,df,t,band):
     #Correcting for extinction
@@ -194,7 +202,7 @@ def best_texp(eventname,df,band,min,max):
     fit_time['Reduced_chi'] = fit_best_chi
     fit_time['Difference'] = list(abs(fit_time.Reduced_chi - 1))
     #if method == 'difference':
-    #print(fit_time)
+    print(fit_time)
     best_fit = fit_time.loc[fit_time['Difference'].idxmin()]
     #else:
         #best_fit = fit_time.loc[fit_time['Reduced_chi'].idxmin()]
@@ -220,19 +228,18 @@ def extinction(ra,dec):
     Ai = 2.086*ebv
     Az = 1.479*ebv
     return Ag,Ar,Ai,Az,ebv
-events = ['SN2012aw','SN2014cx','SN2013ab','SN2013fs']
+events = ['SN2012aw','SN2013fs','SN2014cx','SN2013ab','SN2012aw','SN2013fs']
 def group(df,eventname,bands,source):
     band_df = []
     #print(source)
     for item in bands:
         d = process(df,band = item,source = source)
-        print(d)
+        #print(d)
         band_df.append(d)
     if eventname == 'SN2014cx' or eventname == 'SN2013ab':
         return band_df[0],band_df[1],band_df[2]
     elif eventname == 'SN2013fs' or eventname == 'SN2012aw' :
         return band_df[0],band_df[1],band_df[2],band_df[3]
-
 def event(eventname):
     sn_data = pd.read_csv('/Users/bhagyasubrayan/'+ eventname+'.csv')
     print(sn_data)
@@ -242,18 +249,18 @@ def event(eventname):
         #print(sn_data_1)
         bands = ['g','r','i','z']
         g, r, i ,zband = group(sn_data,eventname,bands,source ='2016MNRAS.459.3939V')
-        texplo_g, model_g = analysis(eventname,g,band = 'g',color = 'g',min= 0,max = 5)#upper = g_upper
-        texplo_r,model_r = analysis(eventname,r,band = 'r',color = 'r', min = texplo_g - 1 ,max = texplo_g + 3)
-        texplo_i,model_i = analysis(eventname,i,band = 'i',color = 'y', min = texplo_g - 3 ,max = texplo_g + 3)
-        texplo_z,model_z = analysis(eventname,zband,band = 'z',color = 'b', min = texplo_g - 3 ,max = texplo_g + 3)
+        texplo_g, model_g = analysis(eventname,g,band = 'g',color = 'g',min= 0,max = 8)#upper = g_upper
+        texplo_r,model_r= analysis(eventname,r,band = 'r',color = 'r', min = texplo_g - 2 ,max = texplo_g + 2)
+        texplo_i,model_i= analysis(eventname,i,band = 'i',color = 'y', min = texplo_g - 2 ,max = texplo_g + 2)
+        texplo_z,model_z = analysis(eventname,zband,band = 'z',color = 'b', min = texplo_g - 2 ,max = texplo_g + 2)
     elif eventname == 'SN2014cx':
         #sn_data_2 = pd.read_csv('/Users/bhagyasubrayan/'+ eventname+'.csv')
         #print(sn_data_2)
         bands = ['g','r','i']
         g,r,i = group(sn_data,eventname,bands,source ='2016MNRAS.459.3939V')
-        texplo_g, model_g = analysis(eventname,g,band = 'g',color = 'g',min= 0,max = 5)#upper = g_upper
-        texplo_r,model_r = analysis(eventname,r,band = 'r',color = 'r', min = texplo_g - 1 ,max = texplo_g + 1)
-        texplo_i,model_i = analysis(eventname,i,band = 'i',color = 'y', min = texplo_g - 1 ,max = texplo_g + 1)
+        texplo_g, model_g = analysis(eventname,g,band = 'g',color = 'g',min= 0,max = 8)#upper = g_upper
+        texplo_r,model_r = analysis(eventname,r,band = 'r',color = 'r', min = texplo_g - 2 ,max = texplo_g + 2)
+        texplo_i,model_i = analysis(eventname,i,band = 'i',color = 'y', min = texplo_g - 2 ,max = texplo_g + 2)
     elif eventname =='SN2013ab':
         #sn_data_3 = pd.read_csv('/Users/bhagyasubrayan/'+ eventname+'.csv')
         #print(sn_data_3)
@@ -268,14 +275,23 @@ def event(eventname):
         bands = ['g','r','i','z']
         g, r, i ,zband = group(sn_data,eventname,bands, source = '0')
         texplo_g, model_g = analysis(eventname,g,band = 'g',color = 'g',min= 0,max = 5)#upper = g_upper
-        texplo_r,model_r = analysis(eventname,r,band = 'r',color = 'r', min = texplo_g - 1 ,max = texplo_g + 3)
-        texplo_i,model_i = analysis(eventname,i,band = 'i',color = 'y', min = texplo_g - 3 ,max = texplo_g + 3)
-        texplo_z,model_z = analysis(eventname,zband,band = 'z',color = 'b', min = texplo_g - 3 ,max = texplo_g + 3)
+        texplo_r,model_r = analysis(eventname,r,band = 'r',color = 'r', min = texplo_g - 1 ,max = texplo_g + 1)
+        texplo_i,model_i = analysis(eventname,i,band = 'i',color = 'y', min = texplo_g - 1 ,max = texplo_g + 1)
+        texplo_z,model_z = analysis(eventname,zband,band = 'z',color = 'b', min = texplo_g - 1 ,max = texplo_g + 1)
+        #plot_model(i,name = model_r,t = texplo_i,band = 'i',color = 'm')
+        #ref_time_models(eventname,g,band = 'g',time = texplo_g,model = model_i,color = 'm')
     #upper = r_upper,
-    plt.title(eventname+ ' ')
-    plt.xlabel('Days from texplosion')
+    plt.title(eventname+ ' ',fontsize='15')
+    plt.xlabel('Days from texplosion',fontsize = '15')
+    plt.ylabel('Absolute Magnitude',fontsize = '15')
+    plt.rc('xtick', labelsize= 15)
+    plt.rc('ytick', labelsize= 15)
     plt.gca().invert_yaxis()
     plt.show()
-for i in range(0,len(events)):
+for i in range(0,1):
     z, ra, dec, Ag,Ar,Ai, Az,ebv,s,dmod = metadata(events[i])
     event(eventname = events[i])
+def ref_time_models(eventname,df,band,time,model,color):
+    original_obs = subset_df(df)
+    mod_df = final_obs_df(eventname,original_obs,original_obs.MJD[0] - time,band = band)
+    plot_model(mod_df, name = model,band = band, t = texplosion,color=color)
